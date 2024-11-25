@@ -64,7 +64,7 @@
   nsiter   = 500
   !!a2f         = .true.
 
-  dvscf_dir   = '../phonons/save'
+  dvscf_dir   = './save'
   
   nk1         = 6
   nk2         = 6
@@ -74,11 +74,11 @@
   nq2         = 6
   nq3         = 6
 
-  nkf1         = 10
-  nkf2         = 10
-  nkf3         = 10
+  nkf1         = 20
+  nkf2         = 20
+  nkf3         = 20
 
-  nqf1         = 10
-  nqf2         = 10
-  nqf3         = 10
+  nqf1         = 20
+  nqf2         = 20
+  nqf3         = 20
  /

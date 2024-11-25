@@ -8,10 +8,10 @@ import numpy as np
 import os
 
 # Enter the number of irr. q-points
-prefix = input('Enter the prefix used for PH calculations (e.g. diam)\n')
+prefix = "pb"
 
 # Enter the number of irr. q-points
-nqpt = input('Enter the number of irreducible q-points\n')
+nqpt = 16
 try:
   nqpt = int(nqpt)
 except ValueError:

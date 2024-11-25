@@ -12,11 +12,14 @@ plt.rc("font", family='Times New Roman')
 
 class cal_delta():
     def __init__(self, prefix, nk1, nk2, nk3, nmode):
+        #parse class parameters
         self.NE=36
         self.nk1=nk1
         self.nk2=nk2
         self.nk3=nk3
         self.nmode=nmode
+        
+        #get input data and create output format
         self.dosef0, self.dosef1, self.dosef_dos, self.Vkkdata1, self.Vkk, self.dkk = self.GetInput(prefix, nmode)
     
     #get the size of input data(number of kpoints, number of bands, size of .kkq file)
@@ -24,40 +27,36 @@ class cal_delta():
         LVkk = len(Vkkdata)
         kkkk = np.unique(Vkkdata[:, 0])
         aaaa = np.unique(Vkkdata[:, 4])
-        
         kindex = np.unique(lambdaFS[:, 3], return_index=True)
         Lk = len(kindex[0])
         Libnd = len(aaaa)
         Lkk = np.zeros((Lk))
-        
         return LVkk, kkkk, Lk, Libnd, Lkk
     
     #get all data we need by input file
     def GetInput(self, prefix, nmode):
         Vkkfile = prefix+'.lambda_kkq'
         Vkkdata = np.loadtxt(Vkkfile)
-        
         datafile = prefix+'.lambda_FS'
         lambdaFS = np.loadtxt(datafile)
         LVkk, kkkk, Lk, Libnd, Lkk = self.GetInputSize(Vkkdata, lambdaFS)
         self.lambdaFS = lambdaFS
         self.LVkk = LVkk
-        self.kkkk = kkkk
         self.Lk = Lk
         self.Lkk = Lkk
         self.Libnd = Libnd
+        
+        #Generate containers that store intermediate variables
         Vkkdata1 = np.zeros((Lk, Lk, Libnd, Libnd, nmode), dtype=np.complex64)
-
         dosef0 = np.zeros((Lk, Libnd))
         dosef_dos = np.zeros((Lk, Libnd))
         dosef1 = np.zeros((Lk, Libnd))
-
         Vkk = np.zeros((Lk * Libnd * Libnd, Lk * Libnd * Libnd), dtype=np.complex64)
-
         dkk = np.zeros((Lk, Libnd, Libnd), dtype=np.complex64)
         
         ii=0
         sum1=0
+        #get dos data, el-ph matrix data
         while ii < LVkk:
             ik = int(Vkkdata[ii, 0]) - 1
             ikq = int(Vkkdata[ii, 2]) - 1
@@ -83,7 +82,7 @@ class cal_delta():
         return dosef0, dosef1, dosef_dos, Vkkdata1, Vkk, dkk
         
     #calculate interaction matrix
-    def CalVkk(self, Lk, Libnd, Vkk, Vkkdata1, dosef1):
+    def CalVkk(self, Lk, Libnd, Vkk, Vkkdata1, dosef1, nmode):
         for ik in range(Lk):
             for ikq in range(Lk):
                 for sk1 in range(Libnd):
@@ -148,44 +147,7 @@ class cal_delta():
             for i in range(Lk):
                 self.dkk[vv][i] = self.dkk[vv][i] / phase
         return self.dkk
-    def Check(self, dkk, lambdaFS, Vkkdata1):
-        for i in range(len(lambdaFS)):
-            kk1 = int(lambdaFS[i, 3]) - 1
-            kkk1 = int(lambdaFS[i, 4]) - 1
-            print(kk1)
-            if kk1 != kkk1 and abs(dkk[kk1][0, 0]) > 0.000003:
-                break
-        deltakk = np.array([[dkk[kk1][0, 0], dkk[kk1][0, 1]], [np.conjugate(dkk[kk1][0, 1]), dkk[kk1][1, 1]]])
-        deltakkk = np.array([[dkk[kkk1][0, 0], dkk[kkk1][0, 1]], [np.conjugate(dkk[kkk1][0, 1]), dkk[kkk1][1, 1]]])
-        [eigkk, diakk] = np.linalg.eig(deltakk)
-        [eigkkk, diakkk] = np.linalg.eig(deltakkk)
-        if np.linalg.det(diakk) == -1:
-            signkk = -1
-        else:
-            signkk = 1
-        newdeltakk = -signkk * np.dot(np.dot(np.conjugate(np.transpose(diakk)), deltakk), diakk)
-        if np.linalg.det(diakkk) == -1:
-            signkkk = -1
-        else:
-            signkkk = 1
-        newdeltakkk = -signkkk * np.dot(np.dot(np.conjugate(np.transpose(diakkk)), deltakkk), diakkk)
-        print(newdeltakk)
-        print(newdeltakkk)
-            
-        a=0
-        for imode in range(self.nmode):
-            if abs(Vkkdata1[kk1, kkk1, 0, 0, imode]) + abs(Vkkdata1[kk1, kkk1, 0, 1, imode]) >= a:
-                a = abs(Vkkdata1[kk1, kkk1, 0, 0, imode]) + abs(Vkkdata1[kk1, kkk1, 0, 1, imode])
-                amode = imode
-                matrix = [[Vkkdata1[kk1, kkk1, 0, 0, amode], Vkkdata1[kk1, kkk1, 0, 1, amode]],
-                      [Vkkdata1[kk1, kkk1, 1, 0, amode], Vkkdata1[kk1, kkk1, 1, 1, amode]]]
 
-# [eigkk,diakk]=np.linalg.eig(matrix)
-        newdeltakk = -signkk * np.dot(np.dot(np.conjugate(np.transpose(diakk)), matrix), diakkk)
-        print('gkk')
-        print(matrix)
-        print(abs(newdeltakk))
-        
     #normalize our results by the density of states of EPW calculation
     def NormVal(self, evals, dosef_k_dos, dosef_k_epc):
         dosef_single_spin_dos = sum(dosef_k_dos[:,0]) / 2 + sum(dosef_k_dos[:,1]) / 2
@@ -196,7 +158,7 @@ class cal_delta():
     def RunAll(self):
         
         #calculate the interaction matrix
-        self.Vkk = self.CalVkk(self.Lk, self.Libnd, self.Vkk, self.Vkkdata1, self.dosef0)
+        self.Vkk = self.CalVkk(self.Lk, self.Libnd, self.Vkk, self.Vkkdata1, self.dosef0, self.nmode)
         
         #setting how many eigenstates we calculate
         NE=36
@@ -215,10 +177,6 @@ class cal_delta():
         #save our delta results
         self.SaveAll()
 
-        
-        for vv in range(NE):
-            print(vv)
-            self.Check(self.dkk[vv], self.lambdaFS, self.Vkkdata1)
         print(evals)
 new = cal_delta("pb", 10, 10, 10, 3)
 new.RunAll()
