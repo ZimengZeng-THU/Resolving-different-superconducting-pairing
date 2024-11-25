@@ -184,7 +184,7 @@ class irrep_delta():
     
     #get electron wavefunction in wannier basis in wfc333.dat
     def GetWfc(self, Lk, nbwan):
-        d1=np.loadtxt('wfc.dat')
+        d1=np.loadtxt('wfc333.dat')
         wfck=np.zeros((nbwan,Lk,nbwan),dtype=np.complex64)
         LLwfc=len(d1)
         for i in range(LLwfc):
