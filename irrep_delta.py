@@ -115,7 +115,7 @@ wfc_type=1
 
 class irrep_delta():
     def __init__(self, prefix, nk1, nk2, nk3, Ef, ne):
-        #parse the paramter of irrep_delta
+        #parse input parameters
         self.nk1=nk1
         self.nk2=nk2
         self.nk3=nk3
@@ -123,22 +123,22 @@ class irrep_delta():
         self.Ef=Ef
         self.ne=ne
         
-        #parse the input file
+        #parse input file names
         self.bxsffile=self.prefix+'.bxsf'
         self.Vkkfile= self.prefix+'.lambda_kkq'
         self.datafile= self.prefix+'.lambda_FS'
-        
-        #get the input data size
         self.Vkkdata=np.loadtxt(self.datafile)
-        self.Lk=len(self.Vkkdata[:,3])
+        self.lambdaFS=np.loadtxt(self.datafile)
+        
+        #parse input data size
+        self.Lk=len(np.unique(self.Vkkdata[:,3]))
         self.Libnd=len(np.unique(self.Vkkdata[:,8]))
 
-        #get k points list
-        self.lambdaFS=np.loadtxt(self.datafile)
+        #parse k points index
         self.kindex=np.unique(self.lambdaFS[:,3],return_index=True)
-        self.kpoints = self.lambdaFS[self.kindex[1],0:3]
+        self.kpoints = self.lambdaFS[self.kindex[1],0:3]  # This is all the unique x-points
             
-        #extract the data we need from input file
+        #get input data of this code from input file
         self.nbwan, self.NN, self.Ek, self.Ekkxyz = self.GetElStructure(self.bxsffile, self.nk1+1, self.Ef)
         self.wfck=self.GetWfc(self.Lk, self.nbwan)
         self.dkk0 = self.GetDelta(self.ne, self.Lk, self.Libnd)
@@ -157,7 +157,7 @@ class irrep_delta():
                     line=float(line)
                     Ek.append(line)
         
-        #calculate thenumber of k_points, band number, minus of electron energy and Ef
+        #calculate the number of k_points, band number, minus of electron energy and Ef
         NN=N-1
         nbwan=int(len(Ek)/N/N/N)
         Ekkxyz=np.zeros((nbwan,NN,NN,NN))
@@ -249,9 +249,9 @@ class irrep_delta():
                         [sx1, sy1, sz1] = calc_spin_wfc(wfckkk0)
                         spin_xyz[iii,nkx,nky,nkz] = [sx, sy, sz]
                         if iii%2==0:
+                            #print(diag_delta_k)
                             dkkxyz[iii,nkx,nky,nkz]=np.real(diag_delta_k[0,0])
-                            if sx<0:
-                                dkkxyz[iii,nkx,nky,nkz]=-np.real(diag_delta_k[0,0])
+
         return dkkxyz, spin_xyz
     
     #diagnolized the delta function
@@ -273,15 +273,13 @@ class irrep_delta():
     def InterpolateDelta(self, nk1, nk2, nk3, nbwan, NN, dkkxyz):
         #initialize interpolated delta function
         dkkxyz_interpolate = dkkxyz
-        
+
         #interpolate delta function of every band
         for i in range(nbwan):
             rawdata=[]
-            #points=np.array([[0,0,0]])
             x=[]
             y=[]
             z=[]
-            
 
             #generate input data for interpolate function Rbf
             for nkx in range(NN):
@@ -289,7 +287,10 @@ class irrep_delta():
                     for nkz in range(NN):
 
                         if dkkxyz[i,nkx,nky,nkz]>0.00001 or dkkxyz[i,nkx,nky,nkz]<-0.00001:
-                            rawdata.append(dkkxyz[i,nkx,nky,nkz])
+                            if self.spin_xyz[i,nkx,nky,nkz][0]<0:
+                                rawdata.append(-dkkxyz[i,nkx,nky,nkz])
+                            else:
+                                rawdata.append(dkkxyz[i,nkx,nky,nkz])
                             x.append(nkx)
                             y.append(nky)
                             z.append(nkz)
@@ -343,8 +344,11 @@ class irrep_delta():
                             f.write(str(dkkxyz[ii,xk,yk,zk]/cmax)+'\n')    
         f.close()
     def CheckRepC2x(self, dkkxyz, nbwan, NN, Lk, kindex, lambdaFS, Ekkxyz):
-        trans_matrix = [[0, -1, 1], [0, -1, 0], [1, -1, 0]]
-        #trans_matrix = [[1, 0, 0], [0, -1, 0], [0, 0, -1]]
+        avg_character = 0
+        trans_matrix_crys = [[0, -1, 1], [0, -1, 0], [1, -1, 0]]
+        trans_matrix_crys = [[-1, 0, 0], [-1, 0, 1], [-1, 1, 0]]
+        trans_matrix_cart = [[1, 0, 0], [0, -1, 0], [0, 0, -1]]
+        trans_matrix_cart = [[-1, 0, 0], [0, 1, 0], [0, 0, -1]]
         for ibnd in range(nbwan):
             for i in range(Lk):
                 ik=kindex[1][i]
@@ -359,15 +363,19 @@ class irrep_delta():
                 nky=int(ky*NN+10**-6)
                 nkz=int(kz*NN+10**-6)
                 k_vector = [kx, ky, kz]
-                if abs(dkkxyz[ibnd, nkx, nky, nkz]) > 0.000001 and ibnd%2==0: 
+                if abs(dkkxyz[ibnd, nkx, nky, nkz]) > 0.001 and ibnd%2==0: 
                         
-                    nkx_trans, nky_trans, nkz_trans = self.TransKvec(trans_matrix, k_vector, NN)
-                    print("n",nkx, nky, nkz)
-                    print(nkx_trans, nky_trans, nkz_trans)
-                    #print(int(nkx_trans+10**-6), int(nky_trans+10**-6), int(nkz_trans+10**-6))
-                    print(Ekkxyz[ibnd, nkx, nky, nkz], Ekkxyz[ibnd, nkx_trans, nky_trans, nkz_trans])
-                    print(dkkxyz[ibnd, nkx, nky, nkz], dkkxyz[ibnd, nkx_trans, nky_trans, nkz_trans])
-                    print(self.spin_xyz[ibnd, nkx, nky, nkz], self.spin_xyz[ibnd, nkx_trans, nky_trans, nkz_trans])
+                    nkx_trans, nky_trans, nkz_trans = self.TransKvec(trans_matrix_crys, k_vector, NN)
+                    s_0 = self.spin_xyz[ibnd, nkx, nky, nkz]
+                    g_s_k = np.dot(trans_matrix_cart, s_0)
+                    s_g_k = self.spin_xyz[ibnd, nkx_trans, nky_trans, nkz_trans]
+                    spin_compare = -abs(np.linalg.norm(g_s_k-s_g_k))/np.linalg.norm(s_g_k)+1
+                    delta_compare = dkkxyz[ibnd, nkx, nky, nkz] / dkkxyz[ibnd, nkx_trans, nky_trans, nkz_trans]
+                    character = spin_compare * delta_compare
+                    avg_character = avg_character + character
+                    plt.scatter(i, character)
+        print(avg_character / Lk)
+
     def CheckSolution(self, dkkxyz, nbwan, NN, Lk, kindex, lambdaFS, Ekkxyz):
         trans_matrix = [[-1, 0, 0], [0, -1, 0], [0, 0, -1]]
         #trans_matrix = [[1, 0, 0], [0, -1, 0], [0, 0, -1]]
@@ -393,7 +401,7 @@ class irrep_delta():
                     print("delta(n,k) = ", dkkxyz[ibnd, nkx, nky, nkz], "delta(n,-k) = ",dkkxyz[ibnd, nkx_trans, nky_trans, nkz_trans])
                     print("spin(n,k) = ", self.spin_xyz[ibnd, nkx, nky, nkz], "spin(n,-k) = ", self.spin_xyz[ibnd, nkx_trans, nky_trans, nkz_trans])
     def TransKvec(self, trans_matrix, k_vector, NN):
-        print("k",k_vector)
+        #print("k",k_vector)
         for i in range(len(k_vector)):
         
             if k_vector[i] >= 0.5:
@@ -403,7 +411,7 @@ class irrep_delta():
             if k_trans_vector[i] < 0:
                 k_trans_vector[i] = k_trans_vector[i] + 1
         
-        print(k_trans_vector)
+        #print(k_trans_vector)
         return int(k_trans_vector[0]*NN+10**-6), int(k_trans_vector[1]*NN+10**-6), int(k_trans_vector[2]*NN+10**-6)
         
     def RunAll(self):
@@ -412,11 +420,11 @@ class irrep_delta():
         dkkxyz, self.spin_xyz = self.AlignDeltaToElStructure(self.Lk, self.nk1, self.nk2, self.nk3, self.Libnd, self.nbwan, self.NN,  self.Ekkxyz, self.wfck, self.dkk0, self.lambdaFS, self.kindex)
         
         #check whether the gap function is physical meaningful
-        self.CheckSolution(dkkxyz, self.nbwan, self.NN, self.Lk, self.kindex, self.lambdaFS, self.Ekkxyz)
+        #self.CheckSolution(dkkxyz, self.nbwan, self.NN, self.Lk, self.kindex, self.lambdaFS, self.Ekkxyz)
         
         #check what the character of C2x operation in this gap function
         self.CheckRepC2x(dkkxyz, self.nbwan, self.NN, self.Lk, self.kindex, self.lambdaFS, self.Ekkxyz)
-        
+
         #delta fuction of /delta only finite when abs(Ek-Ef)<fthick, we need interpolate delta function to full k space for plot the delta function
         dkkxyz = self.InterpolateDelta(self.nk1, self.nk2, self.nk3, self.nbwan, self.NN, dkkxyz)
     
@@ -427,5 +435,5 @@ class irrep_delta():
 
 
 
-irrep = irrep_delta("Pb", 20, 20, 20, 11.2876, 4)
+irrep = irrep_delta("pb", 20, 20, 20, 11.2876, 4)
 irrep.RunAll()
