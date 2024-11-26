@@ -117,6 +117,10 @@ class cal_delta():
     #dump delta function data
     def WriteDelta(self, dkk, aaaaa, Lk, Libnd):
         eev = np.zeros((Lk * Libnd * Libnd), dtype=np.complex64)
+        #create delta directory
+        if not os.path.exists("delta"):
+            os.mkdir("delta")
+        #save delta function to vector
         for i in range(Lk):
             for ii in range(int(Libnd/2)):
                 deltakk = np.array([[dkk[i][2*ii, ii], dkk[i][2*ii, 2*ii+1]], [dkk[i][2*ii+1, 2*ii], dkk[i][2*ii+1, 2*ii+1]]])
@@ -131,6 +135,7 @@ class cal_delta():
                 for ibnd in range(2):
                     for jbnd in range(2):
                         eev[i * Libnd * Libnd + ii*4+ibnd*2 + jbnd] = dkk[i][ibnd, jbnd]
+        #save vector
         np.savetxt('delta/' + 'dkk' + str(aaaaa) + '.txt', np.column_stack([eev.real, eev.imag]))
         
     #Change the storage format of eigenvectors to store the four components
@@ -158,7 +163,7 @@ class cal_delta():
     def RunAll(self):
         
         #calculate the interaction matrix
-        self.Vkk = self.CalVkk(self.Lk, self.Libnd, self.Vkk, self.Vkkdata1, self.dosef0, self.nmode)
+        self.Vkk = self.CalVkk(self.Lk, self.Libnd, self.Vkk, self.Vkkdata1, self.dosef1, self.nmode)
         
         #setting how many eigenstates we calculate
         NE=36
@@ -178,5 +183,6 @@ class cal_delta():
         self.SaveAll()
 
         print(evals)
-new = cal_delta("pb", 10, 10, 10, 3)
+#cal_delta(prefix, nk1,nk2, nk3, nmode)
+new = cal_delta("pb", 20, 20, 20, 3)
 new.RunAll()
