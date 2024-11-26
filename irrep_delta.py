@@ -376,11 +376,12 @@ class irrep_delta():
                     #the spin expection of \psi_{g(k)}
                     s_g_k = self.spin_xyz[ibnd, nkx_trans, nky_trans, nkz_trans]
                     #a sign denote whether the direction same between g(\psi_k) with \psi_{g(k)}
-                    print("nk:",nkx, nky, nkz)
-                    print("nk_invers:",nkx_trans, nky_trans, nkz_trans)
-                    print("delta(n,k) = ", dkkxyz[ibnd, nkx, nky, nkz], "delta(n,-k) = ",dkkxyz[ibnd, nkx_trans, nky_trans, nkz_trans])
-                    print("spin(n,k) = ", s_0, "spin(n,-k) = ", s_g_k)
-
+                    spin_compare = -abs(np.linalg.norm(g_s_k-s_g_k))/np.linalg.norm(s_g_k)+1
+                    delta_compare = dkkxyz[ibnd, nkx, nky, nkz] / dkkxyz[ibnd, nkx_trans, nky_trans, nkz_trans]
+                    character = spin_compare * delta_compare
+                    avg_character = avg_character + character
+                    plt.scatter(i, character, c="r")
+        plt.ylim([-2,2])
         print(avg_character / Lk)
 
     def CheckSolution(self, dkkxyz, nbwan, NN, Lk, kindex, lambdaFS, Ekkxyz):

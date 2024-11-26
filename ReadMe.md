@@ -1,6 +1,6 @@
 Here I will introduce how to use the codes in this directory. With these codes, you can calculate the different superconductivity pairing channels of real materials base on epw calculation. 
 
-1. you need to obtain the input files of the code in this directory. These input files are generated based on the modified QE code calculation. You can refer to the readme in the example directory. You also can download our file samples from the link[https://cloud.tsinghua.edu.cn/d/168a78a095d54d5d8865/].After this step, you can start step 2. You can also start directly from the third step.
+1. You need to obtain the input files of the code in this directory. These input files are generated based on the modified QE code calculation. You can refer to the readme in the example directory. You also can download our file samples from the link[https://cloud.tsinghua.edu.cn/d/168a78a095d54d5d8865/].After this step, you can start step 2. You can also start directly from the third step.
 
 2. Extract the input file(.lamda_kkq, .bxsf, .lambda_FS, wfc333.dat) to this directory, and then you need to reset the input of cal_delta.py based on the prefix and nkf1, nkf2, and nkf3 in epw.in. Running cal_delta.py will obtain the delta directory, which contains all the information about the gap functions.
 
