@@ -173,7 +173,7 @@ class cal_delta():
         
         #Change the storage format of eigenvectors to store the four components
         #(singlet:\sigma_0; triplet:\sigma_1, \sigma_2, \sigma_3) of each k-point as a 2 * 2 matrix
-        dkk = self.SaveToDelta(NE, evecs, self.Lk, self.Libnd)
+        #dkk = self.SaveToDelta(NE, evecs, self.Lk, self.Libnd)
         
         #because the define of density of states of dos calculation and epc calculation is different,
         #we normalize our results by the density of states of EPW calculation

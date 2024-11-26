@@ -46,7 +46,7 @@ $$
 N_{\mathbf{n}k}
 \end{aligned}
 $$
-Here, k and k' can be valued in the range of those that satisfy the $abs(E_{\mathbf{n}k}-E_f)<fthick$ so $delta_{\mathbf{n}k}$ [(https://docs.epw-code.org/doc/Electron-phononCoupling.html)] in the body does not appear here.
+Here, k and k' can be valued in the range of those that satisfy the $abs(E_{\mathbf{n}k}-E_f)<fthick$ so $\delta_{\mathbf{n}k}$ [(https://docs.epw-code.org/doc/Electron-phononCoupling.html)] in the body does not appear here.
 
 In the interaction matrix element, the elestron phonon coupling matrix element $g_{\mathbf{n}k,\mathbf{m}k'}^{\nu}$ is the eletron phonon coupling matrix element calculated by EPW.According to the EPW Code's method[(https://docs.epw-code.org/doc/Electron-phononCoupling.html)], the density of states $N_{\mathbf{n}k}$ of $|\psi_{\mathbf{n}k}\rangle$ can be simulated by the Gaussian distribution function. It is worth mentioning that the elestron phonon coupling of EPW is based on the formula in the link, where the improved Gaussian distribution function is used to simulate the gap function (equivalent to the density of states at k points), and my calculation uses the Gaussian distribution function output by EPW.
 ## 2.Diagonalizing Interaction Matrix(cal_Delta.py CalEigen NormVal)
