@@ -33,15 +33,16 @@ def get_unique_N(iterable):
 
 #print(np.loadtxt('dos.dat'))
 def fff():
-    prefix="Bi2Se3"
+    prefix="pb"
     here=os.getcwd()
-    ephipool=here+'/OUT'+'/'+prefix+'.ephmat'
+    ephipool=here+'/'+prefix+'.ephmat'
+
+    #merge all data from every .ephmat file
     os.chdir(ephipool)
     ii=0
     Nppp=64
     N=1+np.arange(Nppp)
     npool=0
-
     jj=1
     while jj<Nppp:
         print(jj)
@@ -78,27 +79,26 @@ def fff():
 
         ephmatfile=np.loadtxt('ephmat'+str(ipool))
         ff = np.array(np.loadtxt('ephmat'+str(ipool)))
-        #print(len(VV))
         VV=np.concatenate((VV,ff),axis=0)
-    print(VV)
+
+
+    #get data size of input file
+    nbndsub=len(np.unique(VV[:,1]))
+    nmode=6
     Lk=len(np.unique(VV[:,0]))
 
+    #the index of klist is in fine k mesh but index of ktot is the same with the index of lambdaFS
+    #The k-point order of lambda FS is obtained by sorting the k-points near the Fermi surface according to the index size in klist
     klist=np.array(np.unique(VV[:,0],True))
     ktot=np.zeros(int(max(klist[0])))
-    #klist按大小排序，要输出klist中的一个数字的序号
-    #klist[0][i]这个数的序号是i
     for i in range(len(klist[0])):
         ktot[int(klist[0][i]-1)]=i
-        print(klist[0][i],i)
+        #print(klist[0][i],i)
 
-
-    nbndsub=len(np.unique(VV[:,1]))
-    nmode=len(np.unique(VV[:,3]))
-    #for i in len(VV):
-    #    ik=
-    #f=open('ph'+str(i)+'.sh','w')
+    #save wave function data
     wfc=np.zeros((Lk,nbndsub,nbndsub,nmode,2))
 
+    #write wave function data
     for i in range(len(VV)):
         k=int(VV[i,0]-1)
         ik=int(ktot[k]-1)
@@ -116,7 +116,7 @@ def fff():
         ibnd=int(VV[i,1]-1)
         jbnd=int(VV[i,2]-1)
         imode=int(VV[i,3]-1)
-        print(k,ik)
+        #print(k,ik)
         wfc[ik,ibnd,jbnd,imode,0]=VV[i,4]
         wfc[ik,ibnd,jbnd,imode,1]=VV[i,5]
         f.write(str(ik)+'   '+str(ibnd+1)+'   '+str(jbnd+1)+'   '+str(imode+1)+'   '+str(wfc[ik,ibnd,jbnd,imode,0])+'   '+str(wfc[ik,ibnd,jbnd,imode,1])+'\n')
@@ -131,7 +131,7 @@ def fff():
             for imode in range(nmode):
                 for jbnd in range(nbndsub):
                     f.write(str(ik+1)+'   '+str(ibnd+1)+'   '+str(jbnd+1)+'   '+str(imode+1)+'   '+str(wfc[ik,ibnd,jbnd,imode,0])+'   '+str(wfc[ik,ibnd,jbnd,imode,1])+'\n')
-    print(klist[0])
+    #print(klist[0])
     f.close()
     
 fff()
