@@ -1,44 +1,88 @@
 # **Use of documentation of different pairing channels calculation of Pb**
-Here I will introduce how to use the codes in this directory. With these codes, We can calculate the different superconductivity pairing channels of Pb base on epw calculation. 
+Here I will introduce how to use the codes in this directory to calculate the different superconductivity pairing channels of Pb base on QE+epw data. 
 ## **Directory structure**
 ```text
 Project Directory
-├── cal_delta.py         # main function：calculate different pairing channels
-├── irrep_delta.py       #  determined and output the gap function of  leading odd parity pairing channel of Pb
-├── epw_calculation/     # the input file of QE to generate input data of cal_delta.py and `irrep_delta.py`
-│   ├── scf.in           # the input file of QE
+├── cal_delta.py         # main function：resolve different pairing channels by direct diagonalization method (DDM)
+├── irrep_delta.py       # determine the symmetry of s selected pairing channel
+├── epw_calculation/     # the input file of QE+EPW to generate EPC data for DDM analysis
+│   ├── scf.in           # the input file of self-consistent calculation
 │   ...
-│   └── Readme.md        # Use of documentation of how to generate input data of cal_delta.py and irrep_delta.py
-├── result/              # output data and visualized result of cal_delta.py and irrep_delta.py
-│   ├── delta/           # the output of `cal_delta.py` and the result(`irrep_delta_print.png` `Pb-Rep-gap.png`) of `irrep_delta.py`
+│   └── Readme.md        # instructions for running QE
+├── result/              # sample output data of cal_delta.py and irrep_delta.py
+│   ├── delta/           # the output of `cal_delta.py`
 │   │   ├── dkki-x.txt    # the eigenvector of the xth i-parity eigenvector of interaction matrix
 │   │   ... 
-│   ├── irrep_delta_print.png # irrep of C2x and inversion operation base on leading odd parity pairing channel
-│   └── Pb-gap-rep.png   # Visualized the leading odd parity channel eigenvectors, corresponding to A1u in Fig.4 of paper
+│   └── pbt-3.frmsf   # the output of `irrep_delta.py`
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ```
-## **Input data and output of `cal_delta.py` and `irrep_delta.py`**
+## **Input and output files of `cal_delta.py` and `irrep_delta.py`**
 ### **1.`cal_delta.py`**
-- **Input data**：` .lambda_kkq` and `.lambda_FS`
-- **Output data**: `delta/` directory
-### **1.`irrep_delta.py`**
-- **Input data**：` .bxsf`, `.lambda_FS` and `wfc333.dat`
-- **Output data**: `pbt3.frmsf`
-## **Calculation Porcess**
-### **1.Generated of download input data**
-First we should get input data of `cal_delta.py` and `irrep_delta.py`:
-```bash
-electron phonon coupling data and density of state data: .lambda_kkq; 
-electron structure near fermi_surface: .lambda_FS; 
-electron structure data: .bxsf;  
-wavefunction data: wfc333.dat 
-```
-#### **generate data**
-We can generate these input data by epw calculation,the process of this calculation can refer to `/epw_calculation/Readme.md`.
-#### **download data**
-We also can download these data in this link[https://cloud.tsinghua.edu.cn/d/168a78a095d54d5d8865/].
+- **Input files**：` pb.lambda_kkq` and `pb.lambda_FS`
+- **Output files**: `delta/` directory
 
->**Note that:** this link also include directory `delta/`, it is output of `cal_delta.py`.
+### **2.`irrep_delta.py`**
+- **Input files**：`delta/` directory ,` pb.bxsf`, `pb.lambda_FS` and `wfc.dat`
+- **Output files**: `pbt-3.frmsf`
+## **Calculation Process**
+### **1.QE+EPW calculation**
+First we should get the following data from QE+EPW:
+```bash
+electron phonon coupling data and smearing weight data: pb.lambda_kkq; 
+electron structure near fermi_surface: pb.lambda_FS; 
+electron structure data: pb.bxsf;  
+wavefunction data: wfc.dat 
+```
+
+#### **format of the files**
+##### **pb.lambda_kkq**
+The variables of each column:
+| `ik`  | `Ek`  | `ikq` | `Ekq` | `ibnd` | `jbnd` | `gkk(ik, ibnd, ikq, jbnd, imode).real` | `gkk(ik, ibnd, ikq, jbnd, imode).imag`| `wf(q, imode)` | `weight0(ik, ibnd)` | `weight1(ik, ibnd)` | `weight1(ikq, jbnd)` |
+|-------|-------|-------|-------|--------|--------|--------------------------|-----------------|---------------------|---------------------|--------------------|--------------------|
+
+
+variable meaning:
+| **column**          | **discribution**                                  |
+|-------------------|-------------------------------------------|
+| `ik,ikq`              | momentum index  |
+| `ibnd,jbnd`            | band index                              |
+| `Ek(ik,ibnd), Ekq(ikq,jbnd)`     | electron energy (relative to Fermi energy)             |
+| `imode`             | phonon branch index              |          |
+| `gkk(ik, ibnd, ikq, jbnd, imode).real; gkk(ik, ibnd, ikq, jbnd, imode).imag` | real and imaginary parts of electron-phonon coupling matrix element  |
+| `wf(q, imode)`    | phonon frequency  |
+| `weight0(ik, ibnd), weight0(ikq, jbnd)` | smearing weight of a state given by the derivative of the 0th-order Methfessel-Paxton function (c.f. `qe/Modules/w0gauss.90`)                                        |
+| `weight1(ik, ibnd), weight1(ikq, jbnd)` | smearing weight of a state given by the derivative of the 1th-order Methfessel-Paxton function (c.f. `qe/Modules/w0gauss.90`)                                        |
+
+##### **pb.lambda_FS**
+The variables of each column:
+| `kx`  | `ky`  | `kz` | `ik` | `ikk` | `-kx` | `-ky` | `-kz` | `ibnd` | `Ek`|
+|-------|-------|------|------|-------|-------|-------|-------|--------|-----|
+
+variable meaning:
+| **column**          | **discribution**                                  |
+|-------------------|-------------------------------------------|
+| `kx,ky,kz`              | momentum components in fractional coordinates  |
+| `ik`              | momentum index of (kx,ky,kz)  |
+| `ikk`              | momentum ondex of (-kx, -ky ,-kz)  |
+| `-kx,-ky,-kz`              | momentum components in fractional coordinates   |
+| `ibnd`            | band index                              |
+| `Ek(ik,ibnd)`     | electron energy (relative to Fermi energy)             |
+
+##### **wfc.dat**
+The variables of each column:
+| `ik`  | `ibnd`  | `wannier-index` | `weight.real` | `weight.imag` |
+|-------|---------|-----------------|---------------|---------------|
+
+variable meaning:
+| **column**          | **discribution**                                  |
+|-------------------|-------------------------------------------|
+| `ik`              | momentum index  |
+| `ibnd`              | band index  |
+| `wannier-index`            | index of wannier basis                              |
+| `weight.real` , `weight.real`      | real and imaginary parts of wavefunction weights in wannier basis             |
+
+Sample files can be downloaded from [https://cloud.tsinghua.edu.cn/d/168a78a095d54d5d8865/].
+
 ### **2.Calculate different pairing channel of Pb**
 run the `cal_delta.py` code
 
@@ -46,25 +90,26 @@ run the `cal_delta.py` code
  ./cal_delta.py
 ```
 
-this code output the `delta/` directory, the `delta/dkki-x.txt` saved the xth i-parity eigenvector of interaction matrix.
+this code generates the `delta/` directory; the `delta/dkki-x.txt` saved the xth i-parity eigenvector of interaction matrix. This version of code has not been well optimized, such that this step may take several hours.
 
->**Note that:** if we download input data from link[https://cloud.tsinghua.edu.cn/d/168a78a095d54d5d8865/], we don't need to run this step before starting next start.
-### **3.Determined and output the leading odd parity channel**
-We can run `irrep_delta.py` to analyze the representation of the delta functions and output the `.frmsf` file
+Sample output files can also be downloaded from [https://cloud.tsinghua.edu.cn/d/168a78a095d54d5d8865/].
+
+### **3.Symmetry determination and eigenvector plot**
+Run `irrep_delta.py` to analyze the representation of a selected eigenvector and output the `.frmsf` file
 
 ```bash
 ./irrep_delta.py
 ```
 
-the code should print character of irrep of C2x and inversion operation base on a pairing channel. 
+the code should print character of irrep of C2x and inversion operation of a selected eigenvector. 
 
 ![](./result/irrep_delta_print.png)
 
-Because wannier function does not maintain perfect symmetry, the character here are not rigorous equal to 1. But in fact, the symmetry of wannier function is already good enough, so these character are almost 1 or -1.
+Because wannier interpolation does not maintain perfect symmetry, the symmetry character may not be rigorous
 
 This code also output the electron structure and leading parity gap function to `pbt3.frmsf` file. We can use FermiSurfer[https://mitsuaki1987.github.io/fermisurfer/] to open the `.frmsf` file for drawing.
-### **4.visualized the eigenvector by fermisurfer**
-We need to use FermiSurfer to open the `pbt3.frmsf`, set:
+
+Use FermiSurfer to open the `pbt3.frmsf`, set:
 ```text
 Bar color: BMR
 Background: 0  0  0

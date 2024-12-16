@@ -20,7 +20,7 @@ class cal_delta():
         self.nmode=nmode
         
         #get input data and create output format
-        self.dosef0, self.dosef1, self.dosef_dos, self.Vkkdata1, self.Vkk, self.dkk = self.GetInput(prefix, nmode)
+        self.dosef0, self.dosef1, self.dosef_dos, self.Vkkdata1, self.Vkk_s, self.Vkk_t, self.dkk_s, self.dkk_t = self.GetInput(prefix, nmode)
     
     #get the size of input data(number of kpoints, number of bands, size of .kkq file)
     def GetInputSize(self, Vkkdata, lambdaFS):
@@ -51,8 +51,10 @@ class cal_delta():
         dosef0 = np.zeros((Lk, Libnd))
         dosef_dos = np.zeros((Lk, Libnd))
         dosef1 = np.zeros((Lk, Libnd))
-        Vkk = np.zeros((Lk * Libnd * Libnd, Lk * Libnd * Libnd), dtype=np.complex64)
-        dkk = np.zeros((Lk, Libnd, Libnd), dtype=np.complex64)
+        Vkk_s = np.zeros((Lk * int(Libnd/2) * int(Libnd/2), Lk * int(Libnd/2) * int(Libnd/2)), dtype=np.complex64)
+        Vkk_t = np.zeros((Lk * int(Libnd/2) * int(Libnd/2) * 3, Lk * int(Libnd/2) * int(Libnd/2) * 3), dtype=np.complex64)
+        dkk_s = np.zeros((Lk, int(Libnd/2), int(Libnd/2)), dtype=np.complex64)
+        dkk_t = np.zeros((Lk, int(Libnd/2), int(Libnd/2)), dtype=np.complex64)
         
         ii=0
         sum1=0
@@ -79,10 +81,15 @@ class cal_delta():
                    Vkkdata[ii, 9]
             ii=ii+1
         print(sum1, sum1 / np.sum(dosef_dos) * 2)
-        return dosef0, dosef1, dosef_dos, Vkkdata1, Vkk, dkk
+        return dosef0, dosef1, dosef_dos, Vkkdata1, Vkk_s, Vkk_t, dkk_s, dkk_t
         
     #calculate interaction matrix
-    def CalVkk(self, Lk, Libnd, Vkk, Vkkdata1, dosef1, nmode):
+    def CalVkk(self, Lk, Libnd, Vkkdata1, dosef1, nmode):
+        Vkk = np.zeros((Lk * Libnd * Libnd, Lk * Libnd * Libnd), dtype=np.complex64)
+        Vkk_s = np.zeros((Lk * int(Libnd/2) * int(Libnd/2), Lk * int(Libnd/2) * int(Libnd/2)), dtype=np.complex64)
+        #Vkk_s = np.zeros((Lk * Libnd * Libnd, Lk * Libnd * Libnd), dtype=np.complex64)
+        Vkk_t = np.zeros((Lk * int(Libnd/2) * int(Libnd/2) * 3, Lk * int(Libnd/2) * int(Libnd/2) * 3), dtype=np.complex64)
+        trans_matrix = [[1/np.sqrt(2),0,-1/np.sqrt(2),0],[0,1,0,0],[1/np.sqrt(2),0,1/np.sqrt(2),0],[0,0,0,1]]
         for ik in range(Lk):
             for ikq in range(Lk):
                 for sk1 in range(Libnd):
@@ -90,9 +97,165 @@ class cal_delta():
                         for skq1 in range(Libnd):
                             for skq2 in range(Libnd):
                                 for imode in range(nmode):
-                                    Vkk[ik*Libnd*Libnd+sk1*Libnd+sk2,ikq*Libnd*Libnd+(skq1)*Libnd+skq2]=Vkk[ik*Libnd*Libnd+sk1*Libnd+sk2,ikq*Libnd*Libnd+(skq1)*Libnd+skq2]-Vkkdata1[ik,ikq,sk1,skq1,imode]*np.conjugate(Vkkdata1[ik,ikq,sk2,skq2,imode])*dosef1[ikq,skq1]*2
-                                phase=0
-        return Vkk
+                                    spin_factor_k = 1
+                                    if sk2%2==0:
+                                        spin_factor_k = 1
+                                    else:
+                                        spin_factor_k = -1
+                                    spin_factor_kq = 1
+                                    if skq2%2==0:
+                                        spin_factor_kq = 1
+                                    else:
+                                        spin_factor_kq = -1
+                                    Vkk[ik*Libnd*Libnd+sk1*Libnd+sk2,ikq*Libnd*Libnd+(skq1)*Libnd+skq2] = \
+                                            Vkk[ik*Libnd*Libnd+sk1*Libnd+sk2,ikq*Libnd*Libnd+(skq1)*Libnd+skq2] \
+                                            - ( Vkkdata1[ik,ikq,sk1,skq1,imode]*np.conjugate(Vkkdata1[ik,ikq,sk2,skq2,imode])) \
+                                            *dosef1[ikq,skq1]*2
+                        
+        if 1 == 1:
+            for ik in range(Lk):
+                for ikq in range(Lk):
+                    V00=Vkk[ik*Libnd*Libnd+0*Libnd+0,ikq*Libnd*Libnd+(0)*Libnd+0]
+                    V01=Vkk[ik*Libnd*Libnd+0*Libnd+0,ikq*Libnd*Libnd+(0)*Libnd+1]
+                    V02=Vkk[ik*Libnd*Libnd+0*Libnd+0,ikq*Libnd*Libnd+(1)*Libnd+1]
+                    V03=Vkk[ik*Libnd*Libnd+0*Libnd+0,ikq*Libnd*Libnd+(1)*Libnd+0]
+                    
+                    V10=Vkk[ik*Libnd*Libnd+0*Libnd+1,ikq*Libnd*Libnd+(0)*Libnd+0]
+                    V11=Vkk[ik*Libnd*Libnd+0*Libnd+1,ikq*Libnd*Libnd+(0)*Libnd+1]
+                    V12=Vkk[ik*Libnd*Libnd+0*Libnd+1,ikq*Libnd*Libnd+(1)*Libnd+1]
+                    V13=Vkk[ik*Libnd*Libnd+0*Libnd+1,ikq*Libnd*Libnd+(1)*Libnd+0]
+                    
+                    V30=Vkk[ik*Libnd*Libnd+1*Libnd+0,ikq*Libnd*Libnd+(0)*Libnd+0]
+                    V31=Vkk[ik*Libnd*Libnd+1*Libnd+0,ikq*Libnd*Libnd+(0)*Libnd+1]
+                    V32=Vkk[ik*Libnd*Libnd+1*Libnd+0,ikq*Libnd*Libnd+(1)*Libnd+1]
+                    V33=Vkk[ik*Libnd*Libnd+1*Libnd+0,ikq*Libnd*Libnd+(1)*Libnd+0]
+                    
+                    V20=Vkk[ik*Libnd*Libnd+1*Libnd+1,ikq*Libnd*Libnd+(0)*Libnd+0]
+                    V21=Vkk[ik*Libnd*Libnd+1*Libnd+1,ikq*Libnd*Libnd+(0)*Libnd+1]
+                    V22=Vkk[ik*Libnd*Libnd+1*Libnd+1,ikq*Libnd*Libnd+(1)*Libnd+1]
+                    V23=Vkk[ik*Libnd*Libnd+1*Libnd+1,ikq*Libnd*Libnd+(1)*Libnd+0]
+                    Vkk4=np.array([[V00,V01,V02,V03],[V10,V11,V12,V13],[V20,V21,V22,V23],[V30,V31,V32,V33]])
+                    #print("before",Vkk4[0,1],Vkk4[1,0])
+                    Vkk4=np.dot(np.dot(trans_matrix,Vkk4), np.transpose(trans_matrix))
+                    #print("after",Vkk4[0,1],Vkk4[1,0])
+                    #print('\n')
+                    Vkk_s[ik,ikq] = Vkk4[0,0]
+                                         
+        if 1 == 1:
+            for ik in range(Lk):
+                for ikq in range(Lk):
+                    V00=Vkk[ik*Libnd*Libnd+0*Libnd+0,ikq*Libnd*Libnd+(0)*Libnd+0]
+                    V01=Vkk[ik*Libnd*Libnd+0*Libnd+0,ikq*Libnd*Libnd+(0)*Libnd+1]
+                    V02=Vkk[ik*Libnd*Libnd+0*Libnd+0,ikq*Libnd*Libnd+(1)*Libnd+1]
+                    V03=Vkk[ik*Libnd*Libnd+0*Libnd+0,ikq*Libnd*Libnd+(1)*Libnd+0]
+                    
+                    V10=Vkk[ik*Libnd*Libnd+0*Libnd+1,ikq*Libnd*Libnd+(0)*Libnd+0]
+                    V11=Vkk[ik*Libnd*Libnd+0*Libnd+1,ikq*Libnd*Libnd+(0)*Libnd+1]
+                    V12=Vkk[ik*Libnd*Libnd+0*Libnd+1,ikq*Libnd*Libnd+(1)*Libnd+1]
+                    V13=Vkk[ik*Libnd*Libnd+0*Libnd+1,ikq*Libnd*Libnd+(1)*Libnd+0]
+                    
+                    V30=Vkk[ik*Libnd*Libnd+1*Libnd+0,ikq*Libnd*Libnd+(0)*Libnd+0]
+                    V31=Vkk[ik*Libnd*Libnd+1*Libnd+0,ikq*Libnd*Libnd+(0)*Libnd+1]
+                    V32=Vkk[ik*Libnd*Libnd+1*Libnd+0,ikq*Libnd*Libnd+(1)*Libnd+1]
+                    V33=Vkk[ik*Libnd*Libnd+1*Libnd+0,ikq*Libnd*Libnd+(1)*Libnd+0]
+                    
+                    V20=Vkk[ik*Libnd*Libnd+1*Libnd+1,ikq*Libnd*Libnd+(0)*Libnd+0]
+                    V21=Vkk[ik*Libnd*Libnd+1*Libnd+1,ikq*Libnd*Libnd+(0)*Libnd+1]
+                    V22=Vkk[ik*Libnd*Libnd+1*Libnd+1,ikq*Libnd*Libnd+(1)*Libnd+1]
+                    V23=Vkk[ik*Libnd*Libnd+1*Libnd+1,ikq*Libnd*Libnd+(1)*Libnd+0]
+                    Vkk4=np.array([[V00,V01,V02,V03],[V10,V11,V12,V13],[V20,V21,V22,V23],[V30,V31,V32,V33]])
+                    #print("before",Vkk4[0,1],Vkk4[1,0])
+                    Vkk4=np.dot(np.dot(trans_matrix,Vkk4), np.transpose(trans_matrix))
+                    #print("after",Vkk4[0,1],Vkk4[1,0])
+                    #print('\n')
+
+                    for imode in range(nmode):
+                        spin_factor_k = 1
+                        if sk2%2==0:
+                            spin_factor_k = 1
+                        else:
+                            spin_factor_k = -1
+                        spin_factor_kq = 1
+                        if skq2%2==0:
+                            spin_factor_kq = 1
+                        else:
+                            spin_factor_kq = -1
+                        i=0
+                        j=0
+                        Vkk_t[ik*3+i,ikq*3+j] = Vkk_t[ik*3+i,ikq*3+j] \
+                                - ( Vkkdata1[ik,ikq,0,0,imode]*np.conjugate(Vkkdata1[ik,ikq,1,1,imode])) \
+                                *dosef1[ikq,skq1]*2
+
+
+                        i=0
+                        j=1
+                        Vkk_t[ik*3+i,ikq*3+j] = Vkk_t[ik*3+i,ikq*3+j] \
+                                - ( -Vkkdata1[ik,ikq,0,0,imode]*np.conjugate(Vkkdata1[ik,ikq,1,0,imode])
+                                   +Vkkdata1[ik,ikq,0,1,imode]*np.conjugate(Vkkdata1[ik,ikq,1,1,imode])
+                                   ) \
+                                *dosef1[ikq,skq1]*2 / np.sqrt(2)
+
+                        i=0
+                        j=2
+                        Vkk_t[ik*3+i,ikq*3+j] = Vkk_t[ik*3+i,ikq*3+j] \
+                                - ( -Vkkdata1[ik,ikq,0,1,imode]*np.conjugate(Vkkdata1[ik,ikq,1,0,imode])) \
+                                *dosef1[ikq,skq1]*2
+                        
+                        
+                        i=1
+                        j=0
+                        Vkk_t[ik*3+i,ikq*3+j] = Vkk_t[ik*3+i,ikq*3+j] \
+                                - ( -Vkkdata1[ik,ikq,0,0,imode]*np.conjugate(Vkkdata1[ik,ikq,0,1,imode]) \
+                                    +Vkkdata1[ik,ikq,1,0,imode]*np.conjugate(Vkkdata1[ik,ikq,1,1,imode])
+                                   ) \
+                                *dosef1[ikq,skq1]*2 / np.sqrt(2)
+                        
+                        i=1
+                        j=1
+                        Vkk_t[ik*3+i,ikq*3+j] = Vkk_t[ik*3+i,ikq*3+j] \
+                                - ( Vkkdata1[ik,ikq,0,0,imode]*np.conjugate(Vkkdata1[ik,ikq,0,0,imode])
+                                   -Vkkdata1[ik,ikq,0,1,imode]*np.conjugate(Vkkdata1[ik,ikq,0,1,imode])
+                                   -Vkkdata1[ik,ikq,1,0,imode]*np.conjugate(Vkkdata1[ik,ikq,1,0,imode])
+                                   +Vkkdata1[ik,ikq,1,1,imode]*np.conjugate(Vkkdata1[ik,ikq,1,1,imode])
+                                   ) \
+                                *dosef1[ikq,skq1]*2 / 2
+                                
+                        i=1
+                        j=2
+                        Vkk_t[ik*3+i,ikq*3+j] = Vkk_t[ik*3+i,ikq*3+j] \
+                                - ( Vkkdata1[ik,ikq,0,1,imode]*np.conjugate(Vkkdata1[ik,ikq,0,0,imode])
+                                   -Vkkdata1[ik,ikq,1,1,imode]*np.conjugate(Vkkdata1[ik,ikq,1,0,imode])
+                                
+                                   ) \
+                                *dosef1[ikq,skq1]*2 / np.sqrt(2)
+                                
+                                
+                        i=2
+                        j=0
+                        Vkk_t[ik*3+i,ikq*3+j] = Vkk_t[ik*3+i,ikq*3+j] \
+                                - ( -Vkkdata1[ik,ikq,1,0,imode]*np.conjugate(Vkkdata1[ik,ikq,0,1,imode])
+                                   ) \
+                                *dosef1[ikq,skq1]*2
+                        
+                        
+                        i=2
+                        j=1
+                        Vkk_t[ik*3+i,ikq*3+j] = Vkk_t[ik*3+i,ikq*3+j] \
+                               - ( -Vkkdata1[ik,ikq,1,1,imode]*np.conjugate(Vkkdata1[ik,ikq,0,1,imode])
+                                  +Vkkdata1[ik,ikq,1,0,imode]*np.conjugate(Vkkdata1[ik,ikq,0,0,imode])
+                               
+                                  ) \
+                               *dosef1[ikq,skq1]*2 / np.sqrt(2)
+                        
+                        i=2
+                        j=2
+                        Vkk_t[ik*3+i,ikq*3+j] = Vkk_t[ik*3+i,ikq*3+j] \
+                                - ( Vkkdata1[ik,ikq,1,1,imode]*np.conjugate(Vkkdata1[ik,ikq,0,0,imode])
+                                   ) \
+                                *dosef1[ikq,skq1]*2
+                        
+                                            
+        return Vkk,Vkk_s,Vkk_t
     
     #calculate eigenvector of Vkk
     def CalEigen(self, Vkk, NE):
@@ -110,48 +273,54 @@ class cal_delta():
         return a
     
     #save all data we need
-    def SaveAll(self):
+    def SaveAll(self,dkk_s, dkk_t, dkk):
         for vv in range(self.NE):
-            self.WriteDelta(self.dkk[vv], vv, self.Lk, self.Libnd)
-            
+            self.WriteDelta(dkk_s[vv], "s", vv, self.Lk, self.Libnd)
+            self.WriteDelta(dkk_t[vv], "t", vv, self.Lk, self.Libnd)
+            self.WriteDelta(dkk[vv], "", vv, self.Lk, self.Libnd)
     #dump delta function data
-    def WriteDelta(self, dkk, aaaaa, Lk, Libnd):
-        eev = np.zeros((Lk * Libnd * Libnd), dtype=np.complex64)
+    def WriteDelta(self, dkk, parity, aaaaa, Lk, Libnd):
+        evv = np.zeros((Lk *Libnd *Libnd), dtype = np.complex64)
         #create delta directory
         if not os.path.exists("delta"):
             os.mkdir("delta")
         #save delta function to vector
         for i in range(Lk):
-            for ii in range(int(Libnd/2)):
-                deltakk = np.array([[dkk[i][2*ii, ii], dkk[i][2*ii, 2*ii+1]], [dkk[i][2*ii+1, 2*ii], dkk[i][2*ii+1, 2*ii+1]]])
-                #print(deltakk)
-                [eigkk, diakk] = np.linalg.eig(deltakk)
-
-                if np.linalg.det(diakk) == -1:
-                    signkk = -1
-                else:
-                    signkk = 1
-                newdeltakk = signkk * np.dot(np.dot(np.conjugate(np.transpose(diakk)), deltakk), diakk)
-                for ibnd in range(2):
-                    for jbnd in range(2):
-                        eev[i * Libnd * Libnd + ii*4+ibnd*2 + jbnd] = dkk[i][ibnd, jbnd]
+            deltakk = np.array([[dkk[i][0, 0], -dkk[i][0, 1]], [-dkk[i][1, 0], dkk[i][1, 1]]])
+            for ibnd in range(2):
+                for jbnd in range(2):
+                    evv[i * Libnd * Libnd +ibnd*2 + jbnd] = dkk[i][ibnd, jbnd]
         #save vector
-        np.savetxt('delta/' + 'dkk' + str(aaaaa) + '.txt', np.column_stack([eev.real, eev.imag]))
+        np.savetxt('delta/' + 'dkk' + parity + str(aaaaa) + '.txt', np.column_stack([evv.real, evv.imag]))
         
     #Change the storage format of eigenvectors to store the four components
     #(singlet:\sigma_0; triplet:\sigma_1, \sigma_2, \sigma_3) of each k-point as a 2 * 2 matrix
-    def SaveToDelta(self, NE, evecs, Lk, Libnd):
-        self.dkk = np.zeros((NE, Lk, Libnd, Libnd), dtype=np.complex64)
+    def SaveToDelta(self, NE, evecs, parity, Lk, Libnd):
+        dkk = np.zeros((NE, Lk, Libnd, Libnd), dtype=np.complex64)
         for vv in range(NE):
             phase = 1
             for i in range(Lk):
-                for iibnd in range(Libnd):
-                    for jjbnd in range(Libnd):
-                        self.dkk[vv][i][iibnd, jjbnd] = evecs[i * Libnd * Libnd + iibnd * Libnd + jjbnd, vv]
-            phase = self.GetPhase(self.dkk[vv], self.Lk)
+                if parity == "s":
+                    dkk[vv][i][0, 0] = evecs[i, vv] / np.sqrt(2)
+                    dkk[vv][i][1, 1] = evecs[i, vv] / np.sqrt(2)
+                if parity == "t":
+                    dkk[vv][i][0, 0] = evecs[i * 3 + 1, vv] / np.sqrt(2)
+                    dkk[vv][i][1, 1] = -evecs[i * 3 + 1, vv] / np.sqrt(2)
+                    dkk[vv][i][0, 1] = -evecs[i * 3 + 0, vv]
+                    dkk[vv][i][1, 0] = evecs[i * 3 + 2, vv]
+                if parity == "all":
+                    for sk1 in range(2):
+                        for skq1 in range(2):
+                            dkk[vv][i][sk1, skq1] = evecs[i * Libnd *Libnd +sk1*Libnd +skq1, vv]
+                #if i == 0 and vv == 1:
+                #    print(vv, self.dkk[vv][i])
+            phase = self.GetPhase(dkk[vv], self.Lk)
             for i in range(Lk):
-                self.dkk[vv][i] = self.dkk[vv][i] / phase
-        return self.dkk
+                dkk[vv][i] = dkk[vv][i] / phase
+                if i == 0:
+                    print(vv, dkk[vv][i])
+                    #print(evecs[0,vv],evecs[1,vv],evecs[2,vv])
+        return dkk
 
     #normalize our results by the density of states of EPW calculation
     def NormVal(self, evals, dosef_k_dos, dosef_k_epc):
@@ -163,26 +332,28 @@ class cal_delta():
     def RunAll(self):
         
         #calculate the interaction matrix
-        self.Vkk = self.CalVkk(self.Lk, self.Libnd, self.Vkk, self.Vkkdata1, self.dosef1, self.nmode)
+        Vkk,Vkk_s,Vkk_t = self.CalVkk(self.Lk, self.Libnd, self.Vkkdata1, self.dosef1, self.nmode)
         
         #setting how many eigenstates we calculate
         NE=36
         
         #calculate the eigenvector of interaction matrix Vkk
-        evals, evecs = self.CalEigen(self.Vkk, NE)
-        
-        #Change the storage format of eigenvectors to store the four components
-        #(singlet:\sigma_0; triplet:\sigma_1, \sigma_2, \sigma_3) of each k-point as a 2 * 2 matrix
-        #dkk = self.SaveToDelta(NE, evecs, self.Lk, self.Libnd)
-        
+        evals_s, evecs_s = self.CalEigen(Vkk_s, NE)
+        evals_t, evecs_t = self.CalEigen(Vkk_t, NE)
+        evals, evecs = self.CalEigen(Vkk, NE)
         #because the define of density of states of dos calculation and epc calculation is different,
         #we normalize our results by the density of states of EPW calculation
-        evals = self.NormVal(evals, self.dosef_dos, self.dosef1)
+        evals_s = self.NormVal(evals_s, self.dosef_dos, self.dosef1)
+        evals_t = self.NormVal(evals_t, self.dosef_dos, self.dosef1)
         
         #save our delta results
-        self.SaveAll()
+        dkk_s = self.SaveToDelta(NE, evecs_s, "s", self.Lk, self.Libnd)
+        dkk_t = self.SaveToDelta(NE, evecs_t, "t", self.Lk, self.Libnd)
+        dkk = self.SaveToDelta(NE, evecs, "all", self.Lk, self.Libnd)
+        self.SaveAll(dkk_s, dkk_t, dkk)
 
-        print(evals)
+        print(evals_s)
+        print(evals_t)
 #cal_delta(prefix, nk1,nk2, nk3, nmode)
-new = cal_delta("pb", 20, 20, 20, 3)
+new = cal_delta("pb", 10, 10, 10, 3)
 new.RunAll()
